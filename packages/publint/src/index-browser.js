@@ -31,5 +31,7 @@ export async function publint(options) {
     vfs,
     level: options.level ?? 'suggestion',
     strict: options?.strict ?? false,
+    // Browser only accepts packed input, so the package.json is always published.
+    _publishedManifest: true,
   })
 }

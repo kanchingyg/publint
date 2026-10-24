@@ -275,11 +275,175 @@ testFixture('nested-package-json', [
   'NESTED_PACKAGE_JSON_FIELD_IGNORED',
 ])
 
+testFixture(
+  'unpublishable-protocol-workspace',
+  [
+    {
+      code: 'UNPUBLISHABLE_PROTOCOL_DEPENDENCY',
+      type: 'error',
+      args: { protocol: 'workspace:' },
+    },
+  ],
+  {
+    pack: {
+      files: [
+        {
+          name: 'package/package.json',
+          data: JSON.stringify({
+            name: 'publint-unpublishable-protocol-workspace',
+            version: '0.0.1',
+            private: true,
+            type: 'module',
+            sideEffects: false,
+            exports: './index.js',
+            dependencies: {
+              '@test/dep': 'workspace:*',
+            },
+          }),
+        },
+        { name: 'package/index.js', data: 'export {}' },
+      ],
+    },
+    pkgDir: 'package',
+  },
+)
+
+testFixture(
+  'unpublishable-protocol-catalog',
+  [
+    {
+      code: 'UNPUBLISHABLE_PROTOCOL_DEPENDENCY',
+      type: 'error',
+      args: { protocol: 'catalog:' },
+    },
+  ],
+  {
+    pack: {
+      files: [
+        {
+          name: 'package/package.json',
+          data: JSON.stringify({
+            name: 'publint-unpublishable-protocol-catalog',
+            version: '0.0.1',
+            private: true,
+            type: 'module',
+            sideEffects: false,
+            exports: './index.js',
+            peerDependencies: {
+              '@test/peer': 'catalog:',
+            },
+          }),
+        },
+        { name: 'package/index.js', data: 'export {}' },
+      ],
+    },
+    pkgDir: 'package',
+  },
+)
+
+testFixture(
+  'unpublishable-protocol-jsr',
+  [
+    {
+      code: 'UNPUBLISHABLE_PROTOCOL_DEPENDENCY',
+      type: 'warning',
+      args: { protocol: 'jsr:' },
+    },
+  ],
+  {
+    pack: {
+      files: [
+        {
+          name: 'package/package.json',
+          data: JSON.stringify({
+            name: 'publint-unpublishable-protocol-jsr',
+            version: '0.0.1',
+            private: true,
+            type: 'module',
+            sideEffects: false,
+            exports: './index.js',
+            optionalDependencies: {
+              '@test/optional': 'jsr:@scope/pkg@^1',
+            },
+          }),
+        },
+        { name: 'package/index.js', data: 'export {}' },
+      ],
+    },
+    pkgDir: 'package',
+  },
+)
+
+testFixture('unpublishable-protocol-semver', [], {
+  pack: {
+    files: [
+      {
+        name: 'package/package.json',
+        data: JSON.stringify({
+          name: 'publint-unpublishable-protocol-semver',
+          version: '0.0.1',
+          private: true,
+          type: 'module',
+          sideEffects: false,
+          exports: './index.js',
+          dependencies: {
+            '@test/dep': '^1.2.3',
+          },
+        }),
+      },
+      { name: 'package/index.js', data: 'export {}' },
+    ],
+  },
+  pkgDir: 'package',
+})
+
+test(
+  'unpublishable-protocol-workspace-source',
+  { concurrent: true, timeout: process.env.CI ? 8000 : 5000 },
+  async ({ expect, onTestFinished }) => {
+    const fixtureDir = path.resolve(process.cwd(), 'tests/fixtures')
+    const fixtureContent = (await import('./fixtures/unpublishable-protocol-workspace-source.js'))
+      .default
+    const fixture = await createFixture(fixtureContent, {
+      tempDir: isWindowsCI ? fixtureDir : undefined,
+    })
+    onTestFinished(() => fixture.rm())
+
+    const { messages } = await publint({
+      pkgDir: path.join(fixture.path, 'packages/pkg'),
+    })
+
+    expect(messages.map((m) => m.code)).not.toContain('UNPUBLISHABLE_PROTOCOL_DEPENDENCY')
+  },
+)
+
+test(
+  'unpublishable-protocol-workspace-source pack false',
+  { concurrent: true, timeout: process.env.CI ? 8000 : 5000 },
+  async ({ expect, onTestFinished }) => {
+    const fixtureDir = path.resolve(process.cwd(), 'tests/fixtures')
+    const fixtureContent = (await import('./fixtures/unpublishable-protocol-workspace-source.js'))
+      .default
+    const fixture = await createFixture(fixtureContent, {
+      tempDir: isWindowsCI ? fixtureDir : undefined,
+    })
+    onTestFinished(() => fixture.rm())
+
+    const { messages } = await publint({
+      pkgDir: path.join(fixture.path, 'packages/pkg'),
+      pack: false,
+    })
+
+    expect(messages.map((m) => m.code)).not.toContain('UNPUBLISHABLE_PROTOCOL_DEPENDENCY')
+  },
+)
+
 /**
  * @typedef {{
  *  level?: import('../src/index.d.ts').Options['level']
  *  strict?: import('../src/index.d.ts').Options['strict']
  *  pack?: import('../src/index.d.ts').Options['pack']
+ *  pkgDir?: string
  *  debug?: boolean
  * }} TestOptions
  */
@@ -307,7 +471,7 @@ function testFixture(name, expectCodes, options) {
     onTestFinished(() => fixture.rm())
 
     const { messages } = await publint({
-      pkgDir: fixture.path,
+      pkgDir: options?.pkgDir ?? fixture.path,
       level: options?.level,
       strict: options?.strict,
       pack: options?.pack,

@@ -179,6 +179,15 @@ If the `"imports"` field value does not map to an external dependency, it should
 
 When a dependency with the `file:` or `link:` protocol is used, e.g. `file:../path/to/local/package`, this error is shown as it's likely to not work when installed by end-users. This helps prevent accidentally publishing a package that references local dependencies that were used for testing or debugging.
 
+### `UNPUBLISHABLE_PROTOCOL_DEPENDENCY` <RuleType type="error,warning" />
+
+When a published `package.json` contains a dependency with the `workspace:`, `catalog:`, or `jsr:` protocol in `"dependencies"`, `"peerDependencies"`, or `"optionalDependencies"`, this message is shown. These protocols are only understood by certain package managers during development and are usually rewritten when packing; if they leak into a published package, many consumers cannot resolve them.
+
+- `workspace:` and `catalog:` are reported as errors.
+- `jsr:` is reported as a warning because recent pnpm and Yarn can install it, while npm, older package managers, and Bun generally need the JSR CLI.
+
+This rule only runs when the linted `package.json` is the published one (`pack: { tarball }`, `pack: { files }`, and the browser build). With `pack: 'auto'`, a package manager name, or `pack: false`, publint reads the source directory as-is, which in a workspace still contains protocols that pnpm/yarn/bun rewrite on pack.
+
 ### `MODULE_SHOULD_BE_ESM` <RuleType type="error" />
 
 The `module` field should be ESM only as per convention.

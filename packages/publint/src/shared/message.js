@@ -233,6 +233,12 @@ export function formatMessage(m, pkg, opts = {}) {
       } else {
         return `The "${h.bold(m.path[m.path.length - 1])}" dependency references "${h.bold(pv(m.path))}" that will likely not work when installed by end-users.`
       }
+    case 'UNPUBLISHABLE_PROTOCOL_DEPENDENCY':
+      if (opts.reference) {
+        return `This dependency uses the "${h.bold(m.args.protocol)}" protocol that will not work when installed by end-users.`
+      } else {
+        return `The "${h.bold(m.path[m.path.length - 1])}" dependency references "${h.bold(pv(m.path))}" which uses the "${h.bold(m.args.protocol)}" protocol that will not work when installed by end-users.`
+      }
     case 'BIN_FILE_NOT_EXECUTABLE': {
       const start = opts.reference
         ? 'This bin file'

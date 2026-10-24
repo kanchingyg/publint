@@ -57,12 +57,18 @@ export async function publint(options) {
     console.log('Linting...')
   }
 
+  // Only `{ tarball }` / `{ files }` hold the published package.json.
+  // `'auto'`, package-manager strings, and `false` read the source directory as-is
+  // (in a workspace that still contains `workspace:` / `catalog:`).
+  const publishedManifest = typeof pack === 'object'
+
   return core({
     pkgDir: resolvedPkgDir,
     vfs,
     level: options?.level ?? 'suggestion',
     strict: options?.strict ?? false,
     _packedFiles: packedFiles,
+    _publishedManifest: publishedManifest,
   })
 }
 

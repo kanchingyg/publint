@@ -52,9 +52,13 @@ import {
 /**
  * Includes internal _packedFiles that used to filter paths that is packed.
  * Mainly for node.js local usage only. So that we lint files that are packed only.
+ * `_publishedManifest` is true when the linted package.json is the published one
+ * (`pack: { tarball }` / `{ files }`, and the browser build), not the source that
+ * package managers rewrite.
  * @typedef {Omit<Required<import('../index.d.ts').Options>, 'pack'> & {
  *   vfs: Vfs,
  *   _packedFiles?: string[]
+ *   _publishedManifest?: boolean
  * }} Options
  */
 
@@ -62,7 +66,7 @@ import {
  * @param {Options} options
  * @returns {Promise<import('../index.d.ts').Result>}
  */
-export async function core({ pkgDir, vfs, level, strict, _packedFiles }) {
+export async function core({ pkgDir, vfs, level, strict, _packedFiles, _publishedManifest }) {
   /** @type {import('../index.d.ts').Message[]} */
   const messages = []
   /**
@@ -168,6 +172,37 @@ export async function core({ pkgDir, vfs, level, strict, _packedFiles }) {
             args: {},
             path: ['dependencies', depName],
             type: 'error',
+          })
+        }
+      }
+    })
+  }
+
+  // Check published package.json does not ship package-manager-only protocols
+  if (_publishedManifest) {
+    promiseQueue.push(async () => {
+      const fields = /** @type {const} */ ([
+        'dependencies',
+        'peerDependencies',
+        'optionalDependencies',
+      ])
+      for (const field of fields) {
+        const deps = rootPkg[field]
+        if (!deps) continue
+        for (const depName in deps) {
+          const depVersion = deps[depName]
+          if (typeof depVersion !== 'string') continue
+          /** @type {'workspace:' | 'catalog:' | 'jsr:' | undefined} */
+          let protocol
+          if (depVersion.startsWith('workspace:')) protocol = 'workspace:'
+          else if (depVersion.startsWith('catalog:')) protocol = 'catalog:'
+          else if (depVersion.startsWith('jsr:')) protocol = 'jsr:'
+          if (!protocol) continue
+          messages.push({
+            code: 'UNPUBLISHABLE_PROTOCOL_DEPENDENCY',
+            args: { protocol },
+            path: [field, depName],
+            type: protocol === 'jsr:' ? 'warning' : 'error',
           })
         }
       }

@@ -118,6 +118,7 @@ export type Message =
         }
     >
   | BaseMessage<'LOCAL_DEPENDENCY'>
+  | BaseMessage<'UNPUBLISHABLE_PROTOCOL_DEPENDENCY', { protocol: string }>
   | BaseMessage<'BIN_FILE_NOT_EXECUTABLE'>
   | BaseMessage<
       'IMPORTS_GLOB_NO_DEPRECATED_SUBPATH_MAPPING',
